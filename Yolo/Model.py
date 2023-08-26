@@ -39,8 +39,10 @@ def IOU(x1,x2,y1,y2,w1,w2,h1,h2):
     iou = int_area/un_area
     return iou
 
-def suppression(tensors, n, S, B):
-    print(tensors)
-    mask = n%5 == 0
-    con_list = tensors[mask]
-    print(con_list)
+def suppression_and_division(tensors, n, S, B):
+    tensors = tensors.view(tensors.shape[0]*S*S, (B*5+3))
+    c = torch.arange(B) * 5
+    con_list = tensors[:,c]
+    argmax = con_list.argmax(dim = 1) 
+    out = torch.stack([torch.cat((tensors[i, argmax[i]*5:(argmax[i]*5)+5],tensors[i,B*5:B*5+3]))for i in range(argmax.shape[0])])
+    return out.view(n,S,S,8)

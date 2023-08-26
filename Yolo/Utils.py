@@ -32,7 +32,7 @@ def plot_image_from_tensor( img, tensor):
     for i in range(tensor.shape[0]):
         for j in range(tensor.shape[1]):
             for k in range(B):
-                if tensor[i,j,5*k] == 1:
+                if tensor[i,j,5*k] > 0.5:
 
                     w = tensor[i,j,3+ 5*k]*32
                     h = tensor[i,j,4+ 5*k]*32

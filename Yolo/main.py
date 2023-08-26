@@ -11,10 +11,10 @@ from Utils import *
 from Nets import * 
 from Model import *
 
-folder_path = "./archive/test_zip/test"
+folder_path = "./../archive/test_zip/test"
 
 images_dim = 60
-images_tensor = torch.zeros(images_dim, 3, 256, 256)
+images_tensor = torch.zeros(images_dim, 3, 256, 256, requires_grad= False)
 S = 8
 B = 2
 y_tensor = torch.zeros(images_dim,S,S,(5+3))
@@ -79,20 +79,32 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 yolo_net.to(device)
 optimizer = torch.optim.Adam(yolo_net.parameters(),
                                           lr=0.001)
-images_tensor = images_tensor.cuda()
-y_tensor = y_tensor.cuda()
+if torch.cuda.is_available(): 
+    images_tensor = images_tensor.cuda()
+    y_tensor = y_tensor.cuda()
 
 losses = []
 
-for i in range(100):
-    x = images_tensor
-    pred = yolo_net.forward(torch.tensor(x)).view(images_dim,S,S,(B*5+3))
-    loss = YOLO_Loss(pred,y_tensor)
+for i in range(300):
+    x = images_tensor[0].unsqueeze(0)
+    y = y_tensor[0].unsqueeze(0)
+    images_dim = 1
+    pred = yolo_net.forward(torch.tensor(x))
+    miao = suppression_and_division(pred,images_dim,S,B)
+    pred = pred.view(images_dim,S,S,(B*5+3))
+    loss = YOLO_Loss(pred,y)
     optimizer.zero_grad()
     print("----------------------------",loss)
     loss.backward()
     losses.append(loss.item())
     optimizer.step()
+    torch.save(yolo_net.state_dict(), "./yolo..pth")
+a = yolo_net.forward(images_tensor[0].unsqueeze(0))
+a = a.view(images_dim,S,S,(B*5+3))
+a = suppression_and_division(a, images_dim, S, B).squeeze(0)
+print(a.shape)
+print(a)
+plot_image_from_tensor(images_tensor[0].numpy().transpose(1,2,0), a)
 plt.plot(losses)
 plt.show()
     
