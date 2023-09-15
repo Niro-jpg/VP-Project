@@ -13,31 +13,32 @@ class Yolo(nn.Module):
         self.miaos = nn.Sequential(
             nn.Conv2d(3, 32, 3, 1),
             nn.ReLU(True),
-            nn.Conv2d(32, 64, 8, 4),
+            nn.Conv2d(32, 64, 8, 2),
             nn.ReLU(True),
-            nn.Conv2d(64, 64, 4, 2),
-            nn.ReLU(True),
+            nn.MaxPool2d(kernel_size=2, stride=2),
+            
             nn.Conv2d(64, 64, 3, 1),
             nn.ReLU(True),
             nn.Conv2d(64, 64, 3, 1),
             nn.ReLU(True),
+            nn.MaxPool2d(kernel_size=2, stride=2),
+            
             nn.Conv2d(64, 64, 3, 1),
             nn.ReLU(True),
             nn.Conv2d(64, 64, 3, 1),
             nn.ReLU(True),
+            nn.MaxPool2d(kernel_size=2, stride=2),
+            
             nn.Conv2d(64, 64, 3, 1),
             nn.ReLU(True),
             nn.Conv2d(64, 64, 3, 1),
             nn.ReLU(True),
-            nn.Conv2d(64, 64, 3, 1),
+            nn.Conv2d(64, 64, 3, 2),
             nn.Flatten(),
-            nn.Linear(16384, 1028),
+            
+            nn.Linear(5184, 4096),
             nn.ReLU(True),
-            nn.Linear(1028,512),
-            nn.ReLU(True),
-            nn.Linear(512,128),
-            nn.ReLU(True),
-            nn.Linear(128,S*S*(5*B + C)),
+            nn.Linear(4096,S*S*(5*B + C)),
         )
 
     def forward(self, x):

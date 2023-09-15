@@ -8,17 +8,35 @@ def YOLO_Loss(pred, y):
     B = int(pred.shape[3]/5)
     pred = pred.view(pred.shape[0]*pred.shape[1]*pred.shape[2], pred.shape[3])
     y = y.view(y.shape[0]*y.shape[1]*y.shape[2],y.shape[3])
-    n = pred.shape[0]
-    IOUS = ([IOU(pred[:,1 + i*5],y[:,1],pred[:,2 + i*5],y[:,2],pred[:,3],y[:,3],pred[:,4],y[:,4]) for i in range(B)])
+
+    obj_indexis = [index for index, tensor in enumerate(y) if tensor[0] == 1]
+    obj_y = y[obj_indexis]
+    obj_pred = pred[obj_indexis]
+    #obj_y = y
+    #obj_pred = pred
+    obj_n = len(obj_indexis)
+    #obj_n =pred.shape[0]
+
+    noobj_indexis = [index for index, tensor in enumerate(y) if tensor[0] == 0]
+    noobj_y = y[noobj_indexis]
+    noobj_pred = pred[noobj_indexis]
+    #noobj_y = y
+    #noobj_pred = pred
+    noobj_n = len(noobj_indexis)
+
+    IOUS = ([IOU(obj_pred[:,1 + i*5],obj_y[:,1],obj_pred[:,2 + i*5],obj_y[:,2],obj_pred[:,3],obj_y[:,3],obj_pred[:,4],obj_y[:,4]) for i in range(B)])
     IOUS_argmax = torch.stack([tensor for tensor in IOUS]).argmax(dim = 0)
-    pred = torch.cat([torch.cat((pred[i, IOUS_argmax[i]*5:(IOUS_argmax[i]*5)+5],pred[i,B*5:B*5+3]))for i in range(IOUS_argmax.shape[0])]).view(n,8)
-    center_loss = ((pred[:,1] - y[:,1])**2 + (pred[:,2] + y[:,2])**2).sum()
-    dim_loss = ((pred[:,3] - y[:,3])**2 + (pred[:,4] - y[:,4])**2).sum()
-    confidence_loss = (((pred[:,0] - y[:,0])**2)*y[:,0]).sum()
-    no_confidence_loss = (((pred[:,0] - y[:,0])**2)*(1 - y[:,0])).sum()
-    probability_loss = (((pred[:,5:8] - y[:,5:8])**2).sum(dim = 1)*y[:,0]).sum()
-    print("-----------------------------------------------------")
-    loss_sum = 5*(center_loss) + confidence_loss + 0.5*no_confidence_loss + probability_loss
+    obj_pred = torch.cat([torch.cat((obj_pred[i, IOUS_argmax[i]*5:(IOUS_argmax[i]*5)+5],obj_pred[i,B*5:B*5+3]))for i in range(IOUS_argmax.shape[0])]).view(obj_n, 8)
+
+    center_loss = ((obj_pred[:,1] - obj_y[:,1])**2 + (obj_pred[:,2] - obj_y[:,2])**2).sum()
+    dim_loss = ((obj_pred[:,3].abs().sqrt()*torch.sign(obj_pred[:,3]) - obj_y[:,3].sqrt())**2 + (obj_pred[:,4].abs().sqrt()*torch.sign(obj_pred[:,4]) - obj_y[:,4].sqrt())**2).sum()
+    confidence_loss = ((obj_pred[:,0] - obj_y[:,0])**2).sum()
+    no_confidence_loss_tensor = torch.stack([torch.stack(([tensor[i*5] for i in range(B)])).max() for tensor in noobj_pred])
+    no_confidence_loss = ((no_confidence_loss_tensor)**2).sum()
+    #probability_loss = (((obj_pred[:,5:8] - obj_y[:,5:8])**2).sum(dim = 1)*obj_y[:,0]).mean()
+    class_loss = ((obj_pred[:,-3:] - obj_y[:,-3:])**2).sum()
+    probability_loss = 0
+    loss_sum = 5*center_loss + confidence_loss + 0.5*no_confidence_loss + probability_loss + 5*dim_loss + class_loss
     return loss_sum
 
 def IOU(x1,x2,y1,y2,w1,w2,h1,h2):
@@ -39,10 +57,8 @@ def IOU(x1,x2,y1,y2,w1,w2,h1,h2):
     iou = int_area/un_area
     return iou
 
-def suppression_and_division(tensors, n, S, B):
-    tensors = tensors.view(tensors.shape[0]*S*S, (B*5+3))
-    c = torch.arange(B) * 5
-    con_list = tensors[:,c]
-    argmax = con_list.argmax(dim = 1) 
-    out = torch.stack([torch.cat((tensors[i, argmax[i]*5:(argmax[i]*5)+5],tensors[i,B*5:B*5+3]))for i in range(argmax.shape[0])])
-    return out.view(n,S,S,8)
+def suppression(tensors, n, S, B):
+    print(tensors)
+    mask = n%5 == 0
+    con_list = tensors[mask]
+    print(con_list)
