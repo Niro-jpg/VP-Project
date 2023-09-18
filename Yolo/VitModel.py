@@ -1,11 +1,12 @@
 import torch
 from Net_lite import *
+from VitNet import *
 
 # Yolo Model
 class Yolo(nn.Module):
     def __init__(self, C, B=2, S=8, lambda_obj=5, lambda_noobj=0.5):
         super(Yolo, self).__init__()
-        self.net = Net_Lite(C, B=B)
+        self.net = Transformer(C, B=B)
         self.B = B
         self.C = C
         self.S = S
